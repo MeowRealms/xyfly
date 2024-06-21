@@ -293,7 +293,13 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
     private void sendActionBar(Player player, String message) {
         try {
-            Class<?> craftPlayerClass = Class.forName("org.bukkit.craftbukkit." + getVersion() + ".entity.CraftPlayer");
+            String version = getVersion();
+            if ("unknown".equals(version)) {
+//                player.sendMessage(ChatColor.RED + "无法确定服务器版本，无法发送ActionBar消息！");
+                return;
+            }
+
+            Class<?> craftPlayerClass = Class.forName("org.bukkit.craftbukkit." + version + ".entity.CraftPlayer");
             Object craftPlayer = craftPlayerClass.cast(player);
 
             Class<?> packetPlayOutChatClass = Class.forName("net.minecraft.network.protocol.game.PacketPlayOutChat");
@@ -317,6 +323,12 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
     }
 
     private String getVersion() {
-        return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
+        String packageName = Bukkit.getServer().getClass().getPackage().getName();
+        String[] packageParts = packageName.split("\\.");
+        if (packageParts.length >= 4) {
+            return packageParts[3];
+        } else {
+            return "unknown"; // 或者抛出一个自定义异常，根据你的需求
+        }
     }
 }
