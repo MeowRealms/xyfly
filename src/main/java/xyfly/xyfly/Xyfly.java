@@ -228,7 +228,7 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
             return;
         }
 
-        // 玩家起飞
+        // 玩家起飞设置
         if (event.isFlying()) {
             if (flyTimeMap.containsKey(playerId)) {
                 int timeLeft = flyTimeMap.get(playerId);
