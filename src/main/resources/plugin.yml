@@ -10,7 +10,7 @@ commands:
     description: 管理玩家的飞行时间
     usage: /<command> <on|off|settime|gettime> [玩家] [时间(秒)]
     permission: xyfly.use
-    permission-message: 你没有权限使用这个命令！
+    permission-message: 你没有权限使用这个命令
 permissions:
   xyfly.use:
     description: 允许玩家使用/xyfly命令
