@@ -1,0 +1,4 @@
+name: xyfly
+version: '${version}'
+main: xyfly.xyfly.Xyfly
+api-version: '1.21'
