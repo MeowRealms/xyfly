@@ -11,6 +11,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -270,6 +271,18 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 flyTaskMap.remove(playerId);
                 player.sendMessage(ChatColor.YELLOW + "你已经降落，飞行时间暂停减少。");
             }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+
+        // 玩家退出时停止飞行任务
+        if (flyTaskMap.containsKey(playerId)) {
+            flyTaskMap.get(playerId).cancel();
+            flyTaskMap.remove(playerId);
         }
     }
 
