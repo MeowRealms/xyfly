@@ -262,9 +262,13 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
                     }.runTaskTimer(this, 20, 20);
                     flyTaskMap.put(playerId, task);
                 }
-            } else {
-                stopFlying(player);
-                player.sendMessage(ChatColor.RED + "你没有飞行时间！");
+            }
+        } else {
+            // 玩家降落
+            if (flyTaskMap.containsKey(playerId)) {
+                flyTaskMap.get(playerId).cancel();
+                flyTaskMap.remove(playerId);
+                player.sendMessage(ChatColor.YELLOW + "你已经降落，飞行时间暂停减少。");
             }
         }
     }
