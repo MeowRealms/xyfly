@@ -11,6 +11,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -34,6 +35,7 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
     private final HashMap<UUID, Integer> flyTimeMap = new HashMap<>();
     private final HashMap<UUID, BukkitTask> flyTaskMap = new HashMap<>();
+    private final HashMap<UUID, Boolean> noFallDamageMap = new HashMap<>();
     private File dataFile;
     private FileConfiguration dataConfig;
     private FileConfiguration messagesConfig;
@@ -123,6 +125,11 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
             saveConfig = true;
         }
 
+        if (!config.contains("fallDamageAfterFlyTimeExpired")) {
+            config.set("fallDamageAfterFlyTimeExpired", false);
+            saveConfig = true;
+        }
+
         if (saveConfig) {
             saveConfig();
         }
@@ -144,6 +151,91 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
         if (flyTaskMap.containsKey(playerId)) {
             flyTaskMap.get(playerId).cancel();
             flyTaskMap.remove(playerId);
+        }
+
+        // 检查配置是否允许掉落伤害
+        boolean fallDamage = getConfig().getBoolean("fallDamageAfterFlyTimeExpired", false);
+        if (!fallDamage) {
+            noFallDamageMap.put(playerId, true);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerToggleFlight(PlayerToggleFlightEvent event) {
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+
+        if (!player.hasPermission("xyfly.use")) {
+            return;
+        }
+
+        // 玩家起飞设置
+        if (event.isFlying()) {
+            if (flyTimeMap.containsKey(playerId)) {
+                int timeLeft = flyTimeMap.get(playerId);
+
+                if (timeLeft <= 0) {
+                    stopFlying(player);
+                    player.sendMessage(getMessage("fly_time_expired"));
+                    return;
+                }
+
+                // 启动倒计时任务
+                if (!flyTaskMap.containsKey(playerId)) {
+                    BukkitTask task = new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            int newTimeLeft = flyTimeMap.get(playerId) - 1;
+                            flyTimeMap.put(playerId, newTimeLeft);
+
+                            // 使用 Spigot API 发送 Action Bar 消息
+                            BaseComponent[] message = new BaseComponent[] {
+                                    new TextComponent(ChatColor.GREEN + getConfig().getString("flyTimeMessage").replace("{time}", String.valueOf(newTimeLeft)))
+                            };
+                            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, message);
+
+                            if (newTimeLeft <= 0) {
+                                stopFlying(player);
+                                player.sendMessage(getMessage("fly_time_expired"));
+                                cancel();
+                            }
+                        }
+                    }.runTaskTimer(this, 20, 20);
+                    flyTaskMap.put(playerId, task);
+                }
+            }
+        } else {
+            // 玩家降落
+            if (flyTaskMap.containsKey(playerId)) {
+                flyTaskMap.get(playerId).cancel();
+                flyTaskMap.remove(playerId);
+                player.sendMessage(getMessage("fly_time_paused"));
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+
+        // 玩家退出时停止飞行任务
+        if (flyTaskMap.containsKey(playerId)) {
+            flyTaskMap.get(playerId).cancel();
+            flyTaskMap.remove(playerId);
+        }
+    }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Player) {
+            Player player = (Player) event.getEntity();
+            UUID playerId = player.getUniqueId();
+
+            if (event.getCause() == EntityDamageEvent.DamageCause.FALL && noFallDamageMap.containsKey(playerId)) {
+                event.setCancelled(true);
+                noFallDamageMap.remove(playerId);
+            }
         }
     }
 
@@ -260,72 +352,6 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
             return playerNames;
         }
         return null;
-    }
-
-    @EventHandler
-    public void onPlayerToggleFlight(PlayerToggleFlightEvent event) {
-        Player player = event.getPlayer();
-        UUID playerId = player.getUniqueId();
-
-        if (!player.hasPermission("xyfly.use")) {
-            return;
-        }
-
-        // 玩家起飞设置
-        if (event.isFlying()) {
-            if (flyTimeMap.containsKey(playerId)) {
-                int timeLeft = flyTimeMap.get(playerId);
-
-                if (timeLeft <= 0) {
-                    stopFlying(player);
-                    player.sendMessage(getMessage("fly_time_expired"));
-                    return;
-                }
-
-                // 启动倒计时任务
-                if (!flyTaskMap.containsKey(playerId)) {
-                    BukkitTask task = new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            int newTimeLeft = flyTimeMap.get(playerId) - 1;
-                            flyTimeMap.put(playerId, newTimeLeft);
-
-                            // 使用 Spigot API 发送 Action Bar 消息
-                            BaseComponent[] message = new BaseComponent[] {
-                                    new TextComponent(ChatColor.GREEN + getConfig().getString("flyTimeMessage").replace("{time}", String.valueOf(newTimeLeft)))
-                            };
-                            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, message);
-
-                            if (newTimeLeft <= 0) {
-                                stopFlying(player);
-                                player.sendMessage(getMessage("fly_time_expired"));
-                                cancel();
-                            }
-                        }
-                    }.runTaskTimer(this, 20, 20);
-                    flyTaskMap.put(playerId, task);
-                }
-            }
-        } else {
-            // 玩家降落
-            if (flyTaskMap.containsKey(playerId)) {
-                flyTaskMap.get(playerId).cancel();
-                flyTaskMap.remove(playerId);
-                player.sendMessage(getMessage("fly_time_paused"));
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        UUID playerId = player.getUniqueId();
-
-        // 玩家退出时停止飞行任务
-        if (flyTaskMap.containsKey(playerId)) {
-            flyTaskMap.get(playerId).cancel();
-            flyTaskMap.remove(playerId);
-        }
     }
 
     private void handleFlyOn(Player player) {

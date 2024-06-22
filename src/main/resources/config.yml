@@ -7,3 +7,4 @@
 storage-mode: YAML
 flyTimeMessage: "剩余飞行时间: {time} 秒"
 language: en
+fallDamageAfterFlyTimeExpired: false
