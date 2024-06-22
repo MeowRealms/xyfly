@@ -1,4 +1,4 @@
-name: Itsfly
+name: ItsFly
 main: xyfly.xyfly.Xyfly
 version: 1.0
 api-version: 1.21
@@ -7,8 +7,8 @@ description: 一个允许玩家使用有限飞行时间的插件
 
 commands:
   xyfly:
-    description: 管理玩家的飞行时间
-    usage: /<command> <on|off|settime|gettime> [玩家] [时间(秒)]
+    description: 主命令，用于处理各种子命令
+    usage: /xyfly <subcommand>
     permission: xyfly.use
     permission-message: 你没有权限使用这个命令
 permissions:

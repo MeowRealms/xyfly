@@ -36,11 +36,17 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
     private final HashMap<UUID, BukkitTask> flyTaskMap = new HashMap<>();
     private File dataFile;
     private FileConfiguration dataConfig;
+    private FileConfiguration messagesConfig;
 
     @Override
     public void onEnable() {
         // 保存默认配置文件（如果不存在）
         saveDefaultConfig();
+        // 检查并更新配置文件
+        updateConfig();
+
+        // 加载语言文件
+        loadMessagesConfig();
 
         // 注册 xyfly 指令
         this.getCommand("xyfly").setExecutor(this);
@@ -60,6 +66,19 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
         // 保存数据文件
         saveDataToYAML();
+    }
+
+    private void loadMessagesConfig() {
+        String language = getConfig().getString("language", "en");
+        File messagesFile = new File(getDataFolder(), "languages/" + language + ".yml");
+        if (!messagesFile.exists()) {
+            saveResource("languages/" + language + ".yml", false);
+        }
+        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+    }
+
+    private String getMessage(String key) {
+        return ChatColor.translateAlternateColorCodes('&', messagesConfig.getString("messages." + key, key));
     }
 
     private void loadDataFromYAML() {
@@ -95,6 +114,20 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
         }
     }
 
+    private void updateConfig() {
+        FileConfiguration config = getConfig();
+        boolean saveConfig = false;
+
+        if (!config.contains("flyTimeMessage")) {
+            config.set("flyTimeMessage", "剩余飞行时间: {time} 秒");
+            saveConfig = true;
+        }
+
+        if (saveConfig) {
+            saveConfig();
+        }
+    }
+
     public HashMap<UUID, Integer> getFlyTimeMap() {
         return flyTimeMap;
     }
@@ -117,36 +150,36 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("用法: /xyfly <on|off|settime|gettime> [玩家] [时间(秒)]");
+            sender.sendMessage(getMessage("usage"));
             return false;
         }
 
         if (args[0].equalsIgnoreCase("on")) {
             if (!(sender instanceof Player)) {
-                sender.sendMessage("只有玩家可以使用这个命令！");
+                sender.sendMessage(getMessage("only_players"));
                 return true;
             }
             Player player = (Player) sender;
             if (!player.hasPermission("xyfly.on")) {
-                player.sendMessage("你没有权限开启飞行模式！");
+                player.sendMessage(getMessage("no_permission"));
                 return true;
             }
             handleFlyOn(player);
         } else if (args[0].equalsIgnoreCase("off")) {
             if (!(sender instanceof Player)) {
-                sender.sendMessage("只有玩家可以使用这个命令！");
+                sender.sendMessage(getMessage("only_players"));
                 return true;
             }
             Player player = (Player) sender;
             if (!player.hasPermission("xyfly.off")) {
-                player.sendMessage("你没有权限关闭飞行模式！");
+                player.sendMessage(getMessage("no_permission"));
                 return true;
             }
             stopFlying(player);
-            player.sendMessage("飞行模式已关闭！");
+            player.sendMessage(getMessage("fly_off"));
         } else if (args[0].equalsIgnoreCase("settime")) {
             if (args.length < 2 || args.length > 3) {
-                sender.sendMessage("用法: /xyfly settime [玩家] <时间(秒)>");
+                sender.sendMessage(getMessage("usage"));
                 return false;
             }
 
@@ -155,7 +188,7 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
             if (args.length == 2) {
                 if (!(sender instanceof Player)) {
-                    sender.sendMessage("控制台必须指定玩家！");
+                    sender.sendMessage(getMessage("only_players"));
                     return true;
                 }
                 target = (Player) sender;
@@ -163,41 +196,49 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
             } else {
                 target = Bukkit.getPlayer(args[1]);
                 if (target == null) {
-                    sender.sendMessage("玩家 " + args[1] + " 不在线！");
+                    sender.sendMessage(getMessage("player_not_online").replace("{player}", args[1]));
                     return true;
                 }
                 timeIndex = 2;
             }
 
+            int time;
             try {
-                int time = Integer.parseInt(args[timeIndex]);
-                flyTimeMap.put(target.getUniqueId(), time);
-                sender.sendMessage("玩家 " + target.getName() + " 的飞行时间已设置为 " + time + " 秒。");
-                if (!target.equals(sender)) {
-                    target.sendMessage("你的飞行时间已被设置为 " + time + " 秒。");
-                }
+                time = Integer.parseInt(args[timeIndex]);
             } catch (NumberFormatException e) {
-                sender.sendMessage("时间必须是一个整数！");
+                sender.sendMessage(getMessage("invalid_time"));
+                return true;
             }
+
+            flyTimeMap.put(target.getUniqueId(), time);
+            sender.sendMessage(getMessage("fly_time_set").replace("{player}", target.getName()).replace("{time}", String.valueOf(time)));
+            target.sendMessage(getMessage("fly_time_set_target").replace("{time}", String.valueOf(time)));
         } else if (args[0].equalsIgnoreCase("gettime")) {
-            if (args.length != 2) {
-                sender.sendMessage("用法: /xyfly gettime <玩家>");
+            if (args.length < 2) {
+                sender.sendMessage(getMessage("usage"));
                 return false;
             }
 
             Player target = Bukkit.getPlayer(args[1]);
             if (target == null) {
-                sender.sendMessage("玩家 " + args[1] + " 不在线！");
+                sender.sendMessage(getMessage("player_not_online").replace("{player}", args[1]));
                 return true;
             }
 
-            int timeLeft = flyTimeMap.getOrDefault(target.getUniqueId(), 0);
-            sender.sendMessage("玩家 " + target.getName() + " 的剩余飞行时间为 " + timeLeft + " 秒。");
-        } else {
-            sender.sendMessage("用法: /xyfly <on|off|settime|gettime> [玩家] [时间(秒)]");
-            return false;
-        }
+            int remainingTime = getRemainingFlyTime(target);
+            sender.sendMessage(getMessage("remaining_fly_time").replace("{player}", target.getName()).replace("{time}", String.valueOf(remainingTime)));
+        } else if (args[0].equalsIgnoreCase("reload")) {
+            if (!sender.hasPermission("xyfly.reload")) {
+                sender.sendMessage(getMessage("no_permission"));
+                return true;
+            }
 
+            reloadConfig();
+            loadMessagesConfig();
+            sender.sendMessage(getMessage("config_reloaded"));
+        } else {
+            sender.sendMessage(getMessage("usage"));
+        }
         return true;
     }
 
@@ -209,6 +250,7 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
             completions.add("off");
             completions.add("settime");
             completions.add("gettime");
+            completions.add("reload");
             return completions;
         } else if (args.length == 2 && (args[0].equalsIgnoreCase("settime") || args[0].equalsIgnoreCase("gettime"))) {
             List<String> playerNames = new ArrayList<>();
@@ -236,7 +278,7 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
                 if (timeLeft <= 0) {
                     stopFlying(player);
-                    player.sendMessage(ChatColor.RED + "你的飞行时间已用完！");
+                    player.sendMessage(getMessage("fly_time_expired"));
                     return;
                 }
 
@@ -250,13 +292,13 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
                             // 使用 Spigot API 发送 Action Bar 消息
                             BaseComponent[] message = new BaseComponent[] {
-                                    new TextComponent(ChatColor.GREEN + "剩余飞行时间: " + newTimeLeft + " 秒")
+                                    new TextComponent(ChatColor.GREEN + getConfig().getString("flyTimeMessage").replace("{time}", String.valueOf(newTimeLeft)))
                             };
                             player.spigot().sendMessage(ChatMessageType.ACTION_BAR, message);
 
                             if (newTimeLeft <= 0) {
                                 stopFlying(player);
-                                player.sendMessage(ChatColor.RED + "你的飞行时间已用完！");
+                                player.sendMessage(getMessage("fly_time_expired"));
                                 cancel();
                             }
                         }
@@ -269,7 +311,7 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
             if (flyTaskMap.containsKey(playerId)) {
                 flyTaskMap.get(playerId).cancel();
                 flyTaskMap.remove(playerId);
-                player.sendMessage(ChatColor.YELLOW + "你已经降落，飞行时间暂停减少。");
+                player.sendMessage(getMessage("fly_time_paused"));
             }
         }
     }
@@ -293,10 +335,10 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
         if (remainingTime > 0) {
             player.setAllowFlight(true);
             player.setFlying(true);
-            player.sendMessage(ChatColor.GREEN + "飞行模式已开启！");
-            sendActionBar(player, ChatColor.GREEN + "剩余飞行时间: " + remainingTime + " 秒");
+            player.sendMessage(getMessage("fly_on"));
+            sendActionBar(player, getMessage("fly_time_message").replace("{time}", String.valueOf(remainingTime)));
         } else {
-            player.sendMessage(ChatColor.RED + "你没有足够的飞行时间！");
+            player.sendMessage(getMessage("not_enough_fly_time"));
         }
     }
 
@@ -308,7 +350,6 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
         try {
             String version = getVersion();
             if ("unknown".equals(version)) {
-//                player.sendMessage(ChatColor.RED + "无法确定服务器版本，无法发送ActionBar消息！");
                 return;
             }
 
@@ -341,7 +382,7 @@ public class Xyfly extends JavaPlugin implements CommandExecutor, TabCompleter, 
         if (packageParts.length >= 4) {
             return packageParts[3];
         } else {
-            return "unknown"; // 或者抛出一个自定义异常，根据你的需求
+            return "unknown";
         }
     }
 }

@@ -1,7 +1,9 @@
 
-# 配置文件 - XYFlyPlugin
+# 配置文件 - ItsFly
 # 存储模式可以是 "YAML" 或 "SQLITE"
 # 使用 YAML 时，数据将存储在 flyData.yml 文件中
 # 使用 SQLITE 时，数据将存储在 flyData.db 数据库中
 
 storage-mode: YAML
+flyTimeMessage: "剩余飞行时间: {time} 秒"
+language: en
