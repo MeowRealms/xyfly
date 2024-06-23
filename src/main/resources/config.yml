@@ -1,6 +1,6 @@
 # Xyfly 插件配置文件
 
-# 语言设置
+# 语言设置，en 为英文，zh 为中文
 language: en
 
 # 存储类型: 可选 'yaml' 或 'sqlite，默认sqlite'
