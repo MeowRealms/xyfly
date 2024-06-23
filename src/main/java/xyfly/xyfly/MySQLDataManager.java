@@ -6,6 +6,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class MySQLDataManager extends DataManager {
     private String host;
@@ -14,6 +17,7 @@ public class MySQLDataManager extends DataManager {
     private String username;
     private String password;
     private Connection connection;
+    private Map<UUID, Integer> flyTimes; // 内存中存储玩家飞行时间
 
     public MySQLDataManager(Xyfly plugin) {
         super(plugin);
@@ -22,8 +26,10 @@ public class MySQLDataManager extends DataManager {
         this.database = plugin.getConfig().getString("mysql.database");
         this.username = plugin.getConfig().getString("mysql.username");
         this.password = plugin.getConfig().getString("mysql.password");
-        if(connect()){
+        this.flyTimes = new HashMap<>(); // 初始化存储玩家飞行时间的Map
+        if (connect()) {
             createTableIfNotExists();
+            loadFlyTimes(); // 插件启动时加载数据
         } else {
             plugin.getLogger().severe("Failed to connect to the MySQL database.");
             // 可以选择在这里禁用插件，因为数据库连接是必要的
@@ -57,18 +63,47 @@ public class MySQLDataManager extends DataManager {
         }
     }
 
+    public void loadFlyTimes() {
+        String sql = "SELECT player, time FROM fly_time";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                UUID playerUUID = UUID.fromString(rs.getString("player"));
+                int time = rs.getInt("time");
+                flyTimes.put(playerUUID, time); // 加载数据到内存中
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void saveFlyTimes() {
+        String sql = "REPLACE INTO fly_time (player, time) VALUES (?, ?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (Map.Entry<UUID, Integer> entry : flyTimes.entrySet()) {
+                ps.setString(1, entry.getKey().toString());
+                ps.setInt(2, entry.getValue());
+                ps.addBatch();
+            }
+            ps.executeBatch(); // 批量保存数据到数据库
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void loadData() {
-        // 实现加载数据的逻辑
+        loadFlyTimes();
     }
 
     @Override
     public void saveData() {
-        // 实现保存数据的逻辑
+        saveFlyTimes();
     }
 
     @Override
     public void closeConnection() {
+        saveFlyTimes(); // 插件禁用时保存数据
         if (connection != null) {
             try {
                 connection.close();
@@ -80,6 +115,8 @@ public class MySQLDataManager extends DataManager {
 
     @Override
     public void saveFlyTime(String player, int time) {
+        UUID playerUUID = UUID.fromString(player);
+        flyTimes.put(playerUUID, time); // 更新内存中的数据
         try {
             PreparedStatement ps = connection.prepareStatement(
                     "REPLACE INTO fly_time (player, time) VALUES (?, ?)"
@@ -92,21 +129,9 @@ public class MySQLDataManager extends DataManager {
         }
     }
 
-
     @Override
     public int getFlyTime(String player) {
-        try {
-            PreparedStatement ps = connection.prepareStatement(
-                    "SELECT time FROM fly_time WHERE player=?"
-            );
-            ps.setString(1, player);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return rs.getInt("time");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return 0;
+        UUID playerUUID = UUID.fromString(player);
+        return flyTimes.getOrDefault(playerUUID, 0); // 从内存中获取数据
     }
 }
