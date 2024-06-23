@@ -16,14 +16,22 @@ public abstract class DataManager {
 
     public abstract void closeConnection();
 
+    public abstract void saveFlyTime(String player, int time);
+
+    public abstract int getFlyTime(String player);
+
     public static DataManager getInstance(Xyfly plugin) {
         FileConfiguration config = plugin.getConfig();
-        String storageType = config.getString("storage.type", "yaml");
+        String storageType = config.getString("storage.type", "yaml").toLowerCase();
 
-        if ("sqlite".equalsIgnoreCase(storageType)) {
-            return new SQLiteDataManager(plugin);
-        } else {
-            return new YAMLDataManager(plugin);
+        switch (storageType) {
+            case "mysql":
+                return new MySQLDataManager(plugin);
+            case "sqlite":
+                return new SQLiteDataManager(plugin);
+            case "yaml":
+            default:
+                return new YAMLDataManager(plugin);
         }
     }
 }

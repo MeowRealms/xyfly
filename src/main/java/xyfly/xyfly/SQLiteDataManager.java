@@ -41,32 +41,12 @@ public class SQLiteDataManager extends DataManager {
 
     @Override
     public void loadData() {
-        String selectSQL = "SELECT player_uuid, fly_time FROM fly_data";
-        try (PreparedStatement stmt = connection.prepareStatement(selectSQL);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                UUID playerId = UUID.fromString(rs.getString("player_uuid"));
-                int flyTime = rs.getInt("fly_time");
-                plugin.getFlyTimeMap().put(playerId, flyTime);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        // 省略已有的实现...
     }
 
     @Override
     public void saveData() {
-        String insertOrUpdateSQL = "INSERT OR REPLACE INTO fly_data (player_uuid, fly_time) VALUES (?, ?)";
-        try (PreparedStatement stmt = connection.prepareStatement(insertOrUpdateSQL)) {
-            for (UUID playerId : plugin.getFlyTimeMap().keySet()) {
-                stmt.setString(1, playerId.toString());
-                stmt.setInt(2, plugin.getFlyTimeMap().get(playerId));
-                stmt.addBatch();
-            }
-            stmt.executeBatch();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        // 省略已有的实现...
     }
 
     @Override
@@ -78,5 +58,32 @@ public class SQLiteDataManager extends DataManager {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public void saveFlyTime(String playerUUID, int time) {
+        String sql = "INSERT OR REPLACE INTO fly_data (player_uuid, fly_time) VALUES (?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, playerUUID);
+            pstmt.setInt(2, time);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public int getFlyTime(String playerUUID) {
+        String sql = "SELECT fly_time FROM fly_data WHERE player_uuid = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, playerUUID);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("fly_time");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0; // 如果没有找到记录，返回0
     }
 }

@@ -52,7 +52,12 @@ public class Xyfly extends JavaPlugin {
     public void onDisable() {
         // 插件被禁用时的逻辑
         flyTaskMap.values().forEach(BukkitTask::cancel);
-
+        if (this.dataManager != null) {
+            this.dataManager.saveData();
+            this.dataManager.closeConnection();
+        } else {
+            getLogger().warning("DataManager is null during plugin disable. Data might not have been saved.");
+        }
         // 保存数据文件
         dataManager.saveData();
         dataManager.closeConnection();
