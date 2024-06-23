@@ -1,10 +1,18 @@
+# Xyfly 插件配置文件
 
-# 配置文件 - ItsFly
-# 存储模式可以是 "YAML" 或 "SQLITE"
-# 使用 YAML 时，数据将存储在 flyData.yml 文件中
-# 使用 SQLITE 时，数据将存储在 flyData.db 数据库中
-
-storage-mode: YAML
-flyTimeMessage: "剩余飞行时间: {time} 秒"
+# 语言设置
 language: en
+
+# 存储类型: 可选 'yaml' 或 'sqlite'
+storage:
+  type: sqlite
+
+# 剩余飞行时间消息
+flyTimeMessage: "剩余飞行时间: {time} 秒"
+
+# 飞行时间耗尽后是否允许掉落伤害
 fallDamageAfterFlyTimeExpired: false
+
+# SQLite 数据库配置（仅在 storage.type 为 'sqlite' 时使用）
+sqlite:
+  database: "data.db"
