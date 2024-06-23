@@ -3,7 +3,7 @@
 # 语言设置
 language: en
 
-# 存储类型: 可选 'yaml' 或 'sqlite'
+# 存储类型: 可选 'yaml' 或 'sqlite，默认sqlite'
 storage:
   type: sqlite
 
