@@ -10,7 +10,7 @@ storage:
 # 剩余飞行时间消息
 flyTimeMessage: "剩余飞行时间: {time} 秒"
 
-# 飞行时间耗尽后是否允许掉落伤害
+# 飞行时间耗尽后是否允许掉落伤害，默认 false
 fallDamageAfterFlyTimeExpired: false
 
 # SQLite 数据库配置（仅在 storage.type 为 'sqlite' 时使用）
