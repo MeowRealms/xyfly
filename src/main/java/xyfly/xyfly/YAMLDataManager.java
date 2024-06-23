@@ -2,7 +2,9 @@ package xyfly.xyfly;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.UUID;
 
 public class YAMLDataManager extends DataManager {
@@ -19,7 +21,7 @@ public class YAMLDataManager extends DataManager {
         if (!dataFile.exists()) {
             try {
                 dataFile.createNewFile();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -28,31 +30,59 @@ public class YAMLDataManager extends DataManager {
 
     @Override
     public void loadData() {
-        // 省略已有的实现...
+        if (dataFile.exists()) {
+            // 检查flyTimes部分是否存在
+            if (dataConfig.isConfigurationSection("flyTimes")) {
+                for (String key : dataConfig.getConfigurationSection("flyTimes").getKeys(false)) {
+                    int flyTime = dataConfig.getInt("flyTimes." + key);
+                    plugin.getFlyTimeMap().put(UUID.fromString(key), flyTime);
+                }
+            }
+        }
     }
 
     @Override
     public void saveData() {
-        // 省略已有的实现...
+        for (UUID uuid : plugin.getFlyTimeMap().keySet()) {
+            int flyTime = plugin.getFlyTimeMap().get(uuid);
+            dataConfig.set("flyTimes." + uuid.toString(), flyTime);
+        }
+        try {
+            dataConfig.save(dataFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void closeConnection() {
-        // 对于基于文件的存储，这个方法可能不需要实现任何操作。
+        // 对于基于文件的存储，通常不需要关闭连接的操作
     }
 
     @Override
     public void saveFlyTime(String playerUUID, int time) {
+        UUID uuid = UUID.fromString(playerUUID);
+        plugin.getFlyTimeMap().put(uuid, time); // 更新内存中的数据
+
+        // 更新配置文件中的数据
         dataConfig.set("flyTimes." + playerUUID, time);
         try {
             dataConfig.save(dataFile);
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     @Override
     public int getFlyTime(String playerUUID) {
+        UUID uuid = UUID.fromString(playerUUID);
+
+        // 从内存中获取数据
+        if (plugin.getFlyTimeMap().containsKey(uuid)) {
+            return plugin.getFlyTimeMap().get(uuid);
+        }
+
+        // 从配置文件中获取数据
         return dataConfig.getInt("flyTimes." + playerUUID, 0);
     }
 }

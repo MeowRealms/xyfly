@@ -41,12 +41,33 @@ public class SQLiteDataManager extends DataManager {
 
     @Override
     public void loadData() {
-        // 省略已有的实现...
+        String sql = "SELECT player_uuid, fly_time FROM fly_data";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String playerUUID = rs.getString("player_uuid");
+                int flyTime = rs.getInt("fly_time");
+                // 将数据加载到内存中
+                plugin.getFlyTimeMap().put(UUID.fromString(playerUUID), flyTime);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void saveData() {
-        // 省略已有的实现...
+        String sql = "INSERT OR REPLACE INTO fly_data (player_uuid, fly_time) VALUES (?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            for (UUID playerUUID : plugin.getFlyTimeMap().keySet()) {
+                int flyTime = plugin.getFlyTimeMap().get(playerUUID);
+                pstmt.setString(1, playerUUID.toString());
+                pstmt.setInt(2, flyTime);
+                pstmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -62,6 +83,10 @@ public class SQLiteDataManager extends DataManager {
 
     @Override
     public void saveFlyTime(String playerUUID, int time) {
+        UUID uuid = UUID.fromString(playerUUID);
+        plugin.getFlyTimeMap().put(uuid, time); // 更新内存中的数据
+
+        // 更新数据库中的数据
         String sql = "INSERT OR REPLACE INTO fly_data (player_uuid, fly_time) VALUES (?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, playerUUID);
@@ -74,12 +99,23 @@ public class SQLiteDataManager extends DataManager {
 
     @Override
     public int getFlyTime(String playerUUID) {
+        UUID uuid = UUID.fromString(playerUUID);
+
+        // 从内存中获取数据
+        if (plugin.getFlyTimeMap().containsKey(uuid)) {
+            return plugin.getFlyTimeMap().get(uuid);
+        }
+
+        // 从数据库中获取数据
         String sql = "SELECT fly_time FROM fly_data WHERE player_uuid = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, playerUUID);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                return rs.getInt("fly_time");
+                int flyTime = rs.getInt("fly_time");
+                // 加载到内存中
+                plugin.getFlyTimeMap().put(uuid, flyTime);
+                return flyTime;
             }
         } catch (SQLException e) {
             e.printStackTrace();
