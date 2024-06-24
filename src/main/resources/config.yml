@@ -1,6 +1,6 @@
 configVersion: 1.0 # 不要修改此项
 
-# 语言设置
+# 语言设置，可选 'zh' 或 'en'
 language: en
 
 # 剩余飞行时间消息，{time} 为剩余飞行时间（单位：秒）。
