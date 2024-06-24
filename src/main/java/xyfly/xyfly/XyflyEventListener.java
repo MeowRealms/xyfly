@@ -4,6 +4,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
@@ -80,6 +81,24 @@ public class XyflyEventListener implements Listener {
         if (plugin.getFlyTaskMap().containsKey(playerId)) {
             plugin.getFlyTaskMap().get(playerId).cancel();
             plugin.getFlyTaskMap().remove(playerId);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDamage(EntityDamageByEntityEvent event) {
+        // 检查事件中的实体是否是玩家
+        if (event.getEntity() instanceof Player) {
+            Player player = (Player) event.getEntity();
+
+            // 检查配置项是否启用了战斗状态下关闭飞行
+            if (plugin.isDisableFlyInCombat() && player.isFlying()) {
+                // 关闭玩家的飞行模式
+                player.setFlying(false);
+                player.setAllowFlight(false);
+
+                // 发送消息通知玩家
+                player.sendMessage("你进入了战斗状态，飞行模式已关闭！");
+            }
         }
     }
 

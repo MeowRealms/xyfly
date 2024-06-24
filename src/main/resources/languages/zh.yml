@@ -14,3 +14,4 @@ messages:
   fly_time_paused: "你已经降落，飞行时间暂停减少。"
   not_enough_fly_time: "你没有足够的飞行时间！"
   fly_time_message: "剩余飞行时间: {time} 秒"
+  combat-mode-flight-disabled: "你进入了战斗状态，飞行模式已关闭！"

@@ -1,17 +1,20 @@
-# Xyfly 插件配置文件
+configVersion: 1.0 # 不要修改此项
 
 # 语言设置
 language: en
-
-# 存储类型: 可选 'yaml', 'sqlite' 或 'mysql'
-storage:
-  type: sqlite
 
 # 剩余飞行时间消息
 flyTimeMessage: "剩余飞行时间: {time} 秒"
 
 # 飞行时间耗尽后是否允许掉落伤害，默认为 false
 fallDamageAfterFlyTimeExpired: false
+
+combat:
+  disableFly: true # 当玩家处于战斗状态时是否关闭飞行
+
+# 存储类型: 可选 'yaml', 'sqlite' 或 'mysql'
+storage:
+  type: sqlite
 
 # SQLite 数据库配置（仅在 storage.type 为 'sqlite' 时使用）
 sqlite:

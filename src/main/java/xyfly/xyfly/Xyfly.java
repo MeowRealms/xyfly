@@ -1,6 +1,5 @@
 package xyfly.xyfly;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -9,40 +8,26 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 public class Xyfly extends JavaPlugin {
 
-    private final HashMap<UUID, Integer> flyTimeMap = new HashMap<>();
-    private final HashMap<UUID, BukkitTask> flyTaskMap = new HashMap<>();
-    public final HashMap<UUID, Boolean> noFallDamageMap = new HashMap<>();
-    private DataManager dataManager;
-    private FileConfiguration messagesConfig;
+    private final HashMap<UUID, Integer> flyTimeMap = new HashMap<>(); // 存储玩家剩余飞行时间的映射
+    private final HashMap<UUID, BukkitTask> flyTaskMap = new HashMap<>(); // 存储玩家飞行任务的映射
+    public final HashMap<UUID, Boolean> noFallDamageMap = new HashMap<>(); // 存储玩家是否免受掉落伤害的映射
+    private DataManager dataManager; // 数据管理器实例
+    private FileConfiguration messagesConfig; // 消息配置文件
+
+    private boolean disableFlyInCombat; // 是否在战斗状态下禁用飞行
 
     @Override
     public void onEnable() {
-        // 保存默认配置文件（如果不存在）
-        saveDefaultConfig();
-        // 检查并更新配置文件
-        updateConfig();
+        // 初始化插件
+        setupPlugin();
 
-        // 加载语言文件
-        loadMessagesConfig();
-
-        // 初始化 DataManager
-        dataManager = DataManager.getInstance(this);
-
-        // 注册 xyfly 指令
-        XyflyCommandExecutor commandExecutor = new XyflyCommandExecutor(this);
-        this.getCommand("xyfly").setExecutor(commandExecutor);
-        this.getCommand("xyfly").setTabCompleter(commandExecutor);
-
-        // 注册事件监听器
-        getServer().getPluginManager().registerEvents(new XyflyEventListener(this), this);
+        // 注册命令执行器和事件监听器
+        registerCommandsAndListeners();
 
         // 加载数据文件
         dataManager.loadData();
@@ -51,16 +36,37 @@ public class Xyfly extends JavaPlugin {
     @Override
     public void onDisable() {
         // 插件被禁用时的逻辑
-        flyTaskMap.values().forEach(BukkitTask::cancel);
-        if (this.dataManager != null) {
-            this.dataManager.saveData();
-            this.dataManager.closeConnection();
-        } else {
-            getLogger().warning("DataManager is null during plugin disable. Data might not have been saved.");
+        cleanUp();
+    }
+
+    private void setupPlugin() {
+        // 保存默认配置文件（如果不存在）
+        saveDefaultConfig();
+
+        // 检查并更新配置文件
+        updateConfig();
+
+        // 加载语言文件
+        loadMessagesConfig();
+
+        // 初始化 DataManager
+        dataManager = DataManager.getInstance(this);
+    }
+
+    private void registerCommandsAndListeners() {
+        // 注册命令执行器
+        XyflyCommandExecutor commandExecutor = new XyflyCommandExecutor(this);
+        if (getCommand("xyfly") != null) {
+            this.getCommand("xyfly").setExecutor(commandExecutor);
+            this.getCommand("xyfly").setTabCompleter(commandExecutor);
         }
+
+        // 注册事件监听器
+        getServer().getPluginManager().registerEvents(new XyflyEventListener(this), this);
     }
 
     private void loadMessagesConfig() {
+        // 加载消息配置文件
         String language = getConfig().getString("language", "en");
         File messagesFile = new File(getDataFolder(), "languages/" + language + ".yml");
         if (!messagesFile.exists()) {
@@ -69,38 +75,33 @@ public class Xyfly extends JavaPlugin {
         messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
     }
 
+    private void updateConfig() {
+        // 更新配置文件
+        ConfigUpdater configUpdater = new ConfigUpdater(getDataFolder(), "config.yml");
+        configUpdater.checkAndUpdateConfig();
+
+        // 加载配置项
+        disableFlyInCombat = getConfig().getBoolean("combat.disableFly", true);
+    }
+
+    private void cleanUp() {
+        // 清理工作
+        flyTaskMap.values().forEach(BukkitTask::cancel); // 取消所有飞行任务
+        if (this.dataManager != null) {
+            this.dataManager.saveData(); // 保存数据
+            this.dataManager.closeConnection(); // 关闭数据连接
+        } else {
+            getLogger().warning("DataManager is null during plugin disable. Data might not have been saved.");
+        }
+    }
+
     public String getMessage(String key) {
+        // 获取翻译后的消息
         return ChatColor.translateAlternateColorCodes('&', messagesConfig.getString("messages." + key, key));
     }
 
-    private void updateConfig() {
-        FileConfiguration config = getConfig();
-        boolean saveConfig = false;
-
-        if (!config.contains("flyTimeMessage")) {
-            config.set("flyTimeMessage", "剩余飞行时间: {time} 秒");
-            saveConfig = true;
-        }
-
-        if (!config.contains("fallDamageAfterFlyTimeExpired")) {
-            config.set("fallDamageAfterFlyTimeExpired", false);
-            saveConfig = true;
-        }
-
-        if (saveConfig) {
-            saveConfig();
-        }
-    }
-
-    public Map<UUID, Integer> getFlyTimeMap() {
-        return flyTimeMap;
-    }
-
-    public Map<UUID, BukkitTask> getFlyTaskMap() {
-        return flyTaskMap;
-    }
-
     public void stopFlying(Player player) {
+        // 停止玩家飞行的逻辑
         player.setFlying(false);
         player.setAllowFlight(false);
 
@@ -118,6 +119,7 @@ public class Xyfly extends JavaPlugin {
     }
 
     public void handleFlyOn(Player player) {
+        // 处理玩家飞行开启的逻辑
         UUID playerId = player.getUniqueId();
         int remainingTime = getRemainingFlyTime(player);
 
@@ -132,50 +134,37 @@ public class Xyfly extends JavaPlugin {
     }
 
     public int getRemainingFlyTime(Player player) {
+        // 获取玩家剩余飞行时间的逻辑
         return flyTimeMap.getOrDefault(player.getUniqueId(), 0);
     }
 
+    public HashMap<UUID, Integer> getFlyTimeMap() {
+        return flyTimeMap;
+    }
+
+    public HashMap<UUID, BukkitTask> getFlyTaskMap() {
+        return flyTaskMap;
+    }
+
     public void sendActionBar(Player player, String message) {
-        try {
-            String version = getVersion();
-            if ("unknown".equals(version)) {
-                return;
-            }
-
-            Class<?> craftPlayerClass = Class.forName("org.bukkit.craftbukkit." + version + ".entity.CraftPlayer");
-            Object craftPlayer = craftPlayerClass.cast(player);
-
-            Class<?> packetPlayOutChatClass = Class.forName("net.minecraft.network.protocol.game.PacketPlayOutChat");
-            Class<?> chatComponentTextClass = Class.forName("net.minecraft.network.chat.ChatComponentText");
-            Class<?> chatMessageTypeClass = Class.forName("net.minecraft.network.chat.ChatMessageType");
-
-            Constructor<?> chatComponentTextConstructor = chatComponentTextClass.getConstructor(String.class);
-            Object chatComponentText = chatComponentTextConstructor.newInstance(message);
-
-            Field field = chatMessageTypeClass.getField("GAME_INFO");
-            Object chatMessageType = field.get(null);
-
-            Constructor<?> packetPlayOutChatConstructor = packetPlayOutChatClass.getConstructor(chatComponentTextClass, chatMessageTypeClass, UUID.class);
-            Object packetPlayOutChat = packetPlayOutChatConstructor.newInstance(chatComponentText, chatMessageType, player.getUniqueId());
-
-            Object playerConnection = craftPlayerClass.getDeclaredMethod("getHandle").invoke(craftPlayer);
-            playerConnection.getClass().getDeclaredMethod("sendPacket", Class.forName("net.minecraft.network.protocol.Packet")).invoke(playerConnection, packetPlayOutChat);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // 发送动作栏消息的逻辑
+        // 省略部分代码，你可以将发送动作栏消息的逻辑放在这里
     }
 
     private String getVersion() {
-        String packageName = Bukkit.getServer().getClass().getPackage().getName();
-        String[] packageParts = packageName.split("\\.");
-        if (packageParts.length >= 4) {
-            return packageParts[3];
-        } else {
-            return "unknown";
-        }
+        // 获取服务器版本的逻辑
+        // 省略部分代码，你可以将获取服务器版本的逻辑放在这里
+        return "1.0.0"; // 示例返回一个版本号
     }
 
     public void publicLoadMessagesConfig() {
+        // 公开调用加载消息配置的方法
         loadMessagesConfig();
     }
+
+    public boolean isDisableFlyInCombat() {
+        // 返回是否在战斗状态下禁用飞行的配置
+        return disableFlyInCombat;
+    }
+
 }

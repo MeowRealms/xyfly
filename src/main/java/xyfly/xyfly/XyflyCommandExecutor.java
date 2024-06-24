@@ -9,7 +9,6 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
     private final Xyfly plugin;
@@ -20,11 +19,13 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // 如果没有参数，显示用法信息
         if (args.length == 0) {
             sender.sendMessage(plugin.getMessage("usage"));
             return false;
         }
 
+        // 处理 "on" 命令，开启飞行模式
         if (args[0].equalsIgnoreCase("on")) {
             if (!(sender instanceof Player)) {
                 sender.sendMessage(plugin.getMessage("only_players"));
@@ -36,7 +37,9 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
                 return true;
             }
             plugin.handleFlyOn(player);
-        } else if (args[0].equalsIgnoreCase("off")) {
+        }
+        // 处理 "off" 命令，关闭飞行模式
+        else if (args[0].equalsIgnoreCase("off")) {
             if (!(sender instanceof Player)) {
                 sender.sendMessage(plugin.getMessage("only_players"));
                 return true;
@@ -48,7 +51,9 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
             }
             plugin.stopFlying(player);
             player.sendMessage(plugin.getMessage("fly_off"));
-        } else if (args[0].equalsIgnoreCase("settime")) {
+        }
+        // 处理 "settime" 命令，设置飞行时间
+        else if (args[0].equalsIgnoreCase("settime")) {
             if (args.length < 2 || args.length > 3) {
                 sender.sendMessage(plugin.getMessage("usage"));
                 return false;
@@ -84,7 +89,9 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
             plugin.getFlyTimeMap().put(target.getUniqueId(), time);
             sender.sendMessage(plugin.getMessage("fly_time_set").replace("{player}", target.getName()).replace("{time}", String.valueOf(time)));
             target.sendMessage(plugin.getMessage("fly_time_set_target").replace("{time}", String.valueOf(time)));
-        } else if (args[0].equalsIgnoreCase("gettime")) {
+        }
+        // 处理 "gettime" 命令，获取剩余飞行时间
+        else if (args[0].equalsIgnoreCase("gettime")) {
             if (args.length < 2) {
                 sender.sendMessage(plugin.getMessage("usage"));
                 return false;
@@ -98,7 +105,9 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
 
             int remainingTime = plugin.getRemainingFlyTime(target);
             sender.sendMessage(plugin.getMessage("remaining_fly_time").replace("{player}", target.getName()).replace("{time}", String.valueOf(remainingTime)));
-        } else if (args[0].equalsIgnoreCase("reload")) {
+        }
+        // 处理 "reload" 命令，重新加载配置文件
+        else if (args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("xyfly.reload")) {
                 sender.sendMessage(plugin.getMessage("no_permission"));
                 return true;
@@ -107,7 +116,9 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
             plugin.reloadConfig();
             plugin.publicLoadMessagesConfig();  // 使用公共方法调用 loadMessagesConfig()
             sender.sendMessage(plugin.getMessage("config_reloaded"));
-        } else {
+        }
+        // 处理未知命令，显示用法信息
+        else {
             sender.sendMessage(plugin.getMessage("usage"));
         }
         return true;
@@ -115,6 +126,7 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        // 自动补全命令参数
         if (args.length == 1) {
             List<String> completions = new ArrayList<>();
             completions.add("on");

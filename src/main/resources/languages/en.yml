@@ -14,3 +14,4 @@ messages:
   fly_time_paused: "You have landed, fly time paused."
   not_enough_fly_time: "You do not have enough fly time!"
   fly_time_message: "Remaining fly time: {time} seconds"
+  combat-mode-flight-disabled: "Combat mode flight is disabled!"

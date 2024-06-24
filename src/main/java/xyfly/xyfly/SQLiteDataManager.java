@@ -20,6 +20,7 @@ public class SQLiteDataManager extends DataManager {
         }
         File databaseFile = new File(dataFolder, "data.db");
         try {
+            // 建立与 SQLite 数据库的连接
             connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile);
             createTable();
         } catch (SQLException e) {
@@ -27,6 +28,7 @@ public class SQLiteDataManager extends DataManager {
         }
     }
 
+    // 创建存储飞行数据的表
     private void createTable() {
         String createTableSQL = "CREATE TABLE IF NOT EXISTS fly_data (" +
                 "player_uuid TEXT PRIMARY KEY," +
