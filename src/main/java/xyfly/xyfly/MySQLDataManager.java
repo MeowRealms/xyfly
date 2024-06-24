@@ -32,8 +32,6 @@ public class MySQLDataManager extends DataManager {
             loadFlyTimes(); // 插件启动时加载数据
         } else {
             plugin.getLogger().severe("Failed to connect to the MySQL database.");
-            // 可以选择在这里禁用插件，因为数据库连接是必要的
-            // plugin.getPluginLoader().disablePlugin(plugin);
         }
     }
 

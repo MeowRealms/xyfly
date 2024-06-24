@@ -58,9 +58,6 @@ public class Xyfly extends JavaPlugin {
         } else {
             getLogger().warning("DataManager is null during plugin disable. Data might not have been saved.");
         }
-        // 保存数据文件
-        dataManager.saveData();
-        dataManager.closeConnection();
     }
 
     private void loadMessagesConfig() {
