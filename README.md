@@ -1,3 +1,5 @@
+DOWNLOAD(下载)：https://www.spigotmc.org/resources/xyfly-1-21-%E2%9A%A1%EF%B8%8Fmanage-flight-time-for-players%E2%9A%A1%EF%B8%8F-sqlite.117494/
+
 **This is my first plugin, and its functionality is very simple. It allows players to have temporary flight ability. Currently, the time is measured in seconds. More time formats will be added in the future. The time only decreases when the player is flying. This plugin has only been tested in Minecraft version 1.21.
 The plugin is still under development, and more features will be implemented soon.**
 
