@@ -106,6 +106,64 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
             int remainingTime = plugin.getRemainingFlyTime(target);
             sender.sendMessage(plugin.getMessage("remaining_fly_time").replace("{player}", target.getName()).replace("{time}", String.valueOf(remainingTime)));
         }
+        // 处理 "remove" 命令，移除飞行时间
+        else if (args[0].equalsIgnoreCase("remove")) {
+            if (args.length < 2) {
+                sender.sendMessage(plugin.getMessage("usage"));
+                return false;
+            }
+
+            Player target = Bukkit.getPlayer(args[1]);
+            if (target == null) {
+                sender.sendMessage(plugin.getMessage("player_not_online").replace("{player}", args[1]));
+                return true;
+            }
+
+            int removedTime = plugin.getFlyTimeMap().remove(target.getUniqueId());
+            sender.sendMessage(plugin.getMessage("fly_time_removed").replace("{player}", target.getName()).replace("{time}", String.valueOf(removedTime)));
+            target.sendMessage(plugin.getMessage("fly_time_removed_target").replace("{time}", String.valueOf(removedTime)));
+        }
+        // 处理 "addtime" 命令，增加飞行时间
+        else if (args[0].equalsIgnoreCase("addtime")) {
+            if (args.length < 2 || args.length > 3) {
+                sender.sendMessage(plugin.getMessage("usage"));
+                return false;
+            }
+
+            Player target;
+            int timeIndex;
+
+            if (args.length == 2) {
+                if (!(sender instanceof Player)) {
+                    sender.sendMessage(plugin.getMessage("only_players"));
+                    return true;
+                }
+                target = (Player) sender;
+                timeIndex = 1;
+            } else {
+                target = Bukkit.getPlayer(args[1]);
+                if (target == null) {
+                    sender.sendMessage(plugin.getMessage("player_not_online").replace("{player}", args[1]));
+                    return true;
+                }
+                timeIndex = 2;
+            }
+
+            int additionalTime;
+            try {
+                additionalTime = Integer.parseInt(args[timeIndex]);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(plugin.getMessage("invalid_time"));
+                return true;
+            }
+
+            int currentTime = plugin.getFlyTimeMap().getOrDefault(target.getUniqueId(), 0);
+            int newTime = currentTime + additionalTime;
+
+            plugin.getFlyTimeMap().put(target.getUniqueId(), newTime);
+            sender.sendMessage(plugin.getMessage("fly_time_added").replace("{player}", target.getName()).replace("{time}", String.valueOf(additionalTime)));
+            target.sendMessage(plugin.getMessage("fly_time_added_target").replace("{time}", String.valueOf(additionalTime)));
+        }
         // 处理 "reload" 命令，重新加载配置文件
         else if (args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("xyfly.reload")) {
@@ -133,9 +191,11 @@ public class XyflyCommandExecutor implements CommandExecutor, TabCompleter {
             completions.add("off");
             completions.add("settime");
             completions.add("gettime");
+            completions.add("remove");
+            completions.add("addtime");
             completions.add("reload");
             return completions;
-        } else if (args.length == 2 && (args[0].equalsIgnoreCase("settime") || args[0].equalsIgnoreCase("gettime"))) {
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("settime") || args[0].equalsIgnoreCase("gettime") || args[0].equalsIgnoreCase("remove") || args[0].equalsIgnoreCase("addtime"))) {
             List<String> playerNames = new ArrayList<>();
             for (Player player : Bukkit.getOnlinePlayers()) {
                 playerNames.add(player.getName());

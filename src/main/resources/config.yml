@@ -1,10 +1,11 @@
 configVersion: 1.0 # 不要修改此项
 
 # 语言设置，可选 'zh' 或 'en'
-language: en
+language: zh
 
 # 剩余飞行时间消息，{time} 为剩余飞行时间（单位：秒）。
-flyTimeMessage: "剩余飞行时间: {time} 秒"
+flyTimeMessage: "Remaining flight time: {time} seconds"
+#flyTimeMessage: "剩余飞行时间: {time} 秒"
 
 # 飞行时间耗尽后是否允许掉落伤害
 fallDamageAfterFlyTimeExpired: false

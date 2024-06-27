@@ -15,3 +15,5 @@ messages:
   not_enough_fly_time: "You do not have enough fly time!"
   fly_time_message: "Remaining fly time: {time} seconds"
   combat-mode-flight-disabled: "Combat mode flight is disabled!"
+  fly_time_removed: "Fly time for {player} has been removed."
+  fly_time_removed_target: "Your fly time has been removed."

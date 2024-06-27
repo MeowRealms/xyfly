@@ -6,6 +6,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -19,6 +20,16 @@ public class XyflyEventListener implements Listener {
 
     public XyflyEventListener(Xyfly plugin) {
         this.plugin = plugin;
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+
+        // 玩家加入时加载飞行时间
+        int time = plugin.getDataManager().getFlyTime(playerId.toString());
+        plugin.getFlyTimeMap().put(playerId, time);
     }
 
     @EventHandler
@@ -48,6 +59,7 @@ public class XyflyEventListener implements Listener {
                         public void run() {
                             int newTimeLeft = plugin.getFlyTimeMap().get(playerId) - 1;
                             plugin.getFlyTimeMap().put(playerId, newTimeLeft);
+                            plugin.getDataManager().saveFlyTime(playerId.toString(), newTimeLeft); // 保存飞行时间到数据库
 
                             // 使用 Spigot API 发送 Action Bar 消息
                             player.spigot().sendMessage(net.md_5.bungee.api.ChatMessageType.ACTION_BAR, new net.md_5.bungee.api.chat.TextComponent(ChatColor.GREEN + plugin.getConfig().getString("flyTimeMessage").replace("{time}", String.valueOf(newTimeLeft))));
@@ -77,11 +89,14 @@ public class XyflyEventListener implements Listener {
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
 
-        // 玩家退出时停止飞行任务
+        // 玩家退出时停止飞行任务并保存飞行时间
         if (plugin.getFlyTaskMap().containsKey(playerId)) {
             plugin.getFlyTaskMap().get(playerId).cancel();
             plugin.getFlyTaskMap().remove(playerId);
         }
+
+        int timeLeft = plugin.getFlyTimeMap().getOrDefault(playerId, 0);
+        plugin.getDataManager().saveFlyTime(playerId.toString(), timeLeft); // 保存飞行时间到数据库
     }
 
     @EventHandler

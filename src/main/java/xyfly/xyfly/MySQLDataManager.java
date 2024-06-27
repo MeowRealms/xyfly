@@ -38,7 +38,7 @@ public class MySQLDataManager extends DataManager {
     private boolean connect() {
         try {
             connection = DriverManager.getConnection(
-                    "jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false&serverTimezone=UTC", username, password
+                    "jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true", username, password
             );
             return true;
         } catch (SQLException e) {

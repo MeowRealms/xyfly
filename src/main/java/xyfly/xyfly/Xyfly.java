@@ -31,11 +31,13 @@ public class Xyfly extends JavaPlugin {
 
         // 加载数据文件
         dataManager.loadData();
+        loadFlyTimesFromDataManager(); // 从数据库加载飞行时间到内存
     }
 
     @Override
     public void onDisable() {
         // 插件被禁用时的逻辑
+        saveFlyTimesToDataManager(); // 将内存中的飞行时间保存到数据库
         cleanUp();
     }
 
@@ -138,6 +140,13 @@ public class Xyfly extends JavaPlugin {
         return flyTimeMap.getOrDefault(player.getUniqueId(), 0);
     }
 
+    public void setRemainingFlyTime(Player player, int time) {
+        // 设置玩家剩余飞行时间并保存到数据库
+        UUID playerId = player.getUniqueId();
+        flyTimeMap.put(playerId, time);
+        dataManager.saveFlyTime(playerId.toString(), time);
+    }
+
     public HashMap<UUID, Integer> getFlyTimeMap() {
         return flyTimeMap;
     }
@@ -167,4 +176,23 @@ public class Xyfly extends JavaPlugin {
         return disableFlyInCombat;
     }
 
+    private void loadFlyTimesFromDataManager() {
+        // 从数据库加载飞行时间到内存
+        for (Player player : getServer().getOnlinePlayers()) {
+            int time = dataManager.getFlyTime(player.getUniqueId().toString());
+            flyTimeMap.put(player.getUniqueId(), time);
+        }
+    }
+
+    private void saveFlyTimesToDataManager() {
+        // 将内存中的飞行时间保存到数据库
+        for (UUID playerId : flyTimeMap.keySet()) {
+            int time = flyTimeMap.get(playerId);
+            dataManager.saveFlyTime(playerId.toString(), time);
+        }
+    }
+
+    public DataManager getDataManager() {
+        return dataManager;
+    }
 }
